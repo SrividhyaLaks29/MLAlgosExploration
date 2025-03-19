@@ -1,0 +1,181 @@
+from numpy.ma.extras import average
+from sklearn.neighbors import NearestNeighbors
+import numpy as np
+import pandas as pd
+import kneed
+#from distfit import distfit
+from kneed import KneeLocator
+from sklearn.cluster import DBSCAN
+import matplotlib.pyplot as plt
+from scipy import stats
+
+def check_slab(diff):
+  if diff>=0.0 and diff<=20.0:
+    print("Number is trustworthy")
+  elif diff>=20.0 and diff<=70.0:
+    print("Needs more analysis")
+  else:
+    print("Needs re-run")
+#Stable Runs
+#data = [53.35, 70.22, 76.03, 69.85, 61.03, 53.55, 48.73, 43.78, 36.86, 40.06, 38.33, 39.02, 37.6, 39.73, 39.92, 38.42, 37.05, 37.08, 38.06, 35.82, 37.91, 31.67, 34.3, 34.1, 40.11, 34.94, 40.52, 37.29, 34.3, 34.3, 40.37, 37.18, 37.31, 36.4, 34.43, 43.43, 39.05, 40.42, 38.28, 39.4, 44.55, 37.08, 38.75, 43.49, 40.15, 42.62, 39.35, 45.01, 38.03, 43.74, 36.32, 38.53, 39.58, 39.24, 35.04, 37.15, 42.23, 43.68, 36.39, 36.2, 44.76, 39.39, 38.13, 35.13, 37.89, 44.54, 46.22, 37.94, 40.03, 45.26, 38.84, 39.17, 39.84, 37.47, 8.29]
+#data = [0.16, 0.0, 0.16, 9.63, 144.09, 204.9, 187.37, 181.38, 161.46, 151.54, 183.89, 186.46, 191.88, 214.39, 151.44, 123.61, 95.31, 92.83, 136.15, 201.04, 173.56, 148.65, 161.69, 136.88, 153.19, 143.11, 152.92, 163.21, 186.06, 166.05, 181.81, 138.79, 141.4, 193.01, 185.32, 190.04, 178.83, 171.63, 149.43, 184.38, 175.64, 163.87, 169.19, 190.6, 162.69, 166.29, 169.82, 176.12, 168.56, 168.55, 171.28, 175.57, 166.84, 167.27, 180.43, 173.12, 164.89, 186.85, 183.7, 185.06, 192.31, 178.37, 154.86, 47.97, 163.39, 177.73, 182.98, 180.44, 136.06, 150.32, 195.95, 186.86, 155.56, 178.45, 178.88, 182.6, 177.14, 142.51, 166.08, 143.63, 181.64, 204.43, 182.97, 150.21, 192.91, 162.62, 190.03, 172.76, 177.56, 206.84, 167.3, 174.49, 182.08, 187.96, 211.88, 182.9, 103.97, 0.66, 0.0, 0.63, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+#Unstable Runs
+#data =  [0.0, 26.94, 48.39, 53.15, 65.2, 73.11, 83.68, 84.25, 74.33, 78.6, 62.28, 60.73, 66.16, 80.14, 101.03, 109.27, 117.48, 118.35, 139.41, 136.05, 81.2, 94.71, 115.76, 134.21, 144.37, 133.48, 112.31, 131.78, 153.29, 153.55, 121.44, 112.29, 111.35, 138.45, 158.2, 160.19, 124.81, 158.09, 158.92, 141.42, 137.03, 155.92, 150.58, 160.54, 121.17, 140.66, 170.35, 129.25, 128.54, 148.41, 95.03, 59.97, 30.77, 12.99, 0.0]
+#data =[0.16, 0.0, 0.12, 0.04, 0.28, 97.5, 203.13, 239.24, 229.57, 234.89, 191.64, 168.07, 189.01, 94.25, 47.73, 37.64, 37.62, 64.78, 55.78, 50.76, 99.44, 103.6, 158.8, 153.42, 177.62, 203.23, 202.35, 189.11, 205.11, 189.66, 204.82, 200.53, 207.24, 163.71, 174.48, 156.97, 194.6, 163.25, 46.75, 62.58, 54.11, 51.09, 54.41, 58.08, 64.74, 105.78, 128.74, 187.99, 202.1, 181.37, 145.13, 181.76, 167.95, 185.63, 151.2, 186.64, 184.65, 157.66, 111.59, 105.86, 160.86, 187.54, 173.35, 206.31, 194.0, 189.3, 165.91, 134.25, 170.77, 200.46, 205.58, 203.59, 183.22, 171.96, 164.73, 185.24, 161.11, 193.31, 130.6, 170.73, 172.97, 206.14, 186.82, 172.17, 226.27, 221.54, 208.31, 184.98, 196.55, 164.78, 177.97, 144.62, 183.16, 202.34, 197.28, 174.6, 187.42, 213.28, 163.51, 148.3, 182.7, 170.63, 38.93, 0.0, 1.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+#data = [0.0, 38.48, 40.32, 56.53, 54.78, 53.41, 52.73, 52.65, 55.81, 70.02, 43.48, 62.2, 62.06, 63.28, 67.38, 86.69, 84.02, 43.79, 86.89, 86.32, 85.97, 103.1, 101.05, 90.03, 82.04, 99.84, 100.67, 112.95, 115.0, 117.65, 116.5, 117.61, 115.83, 130.18, 130.56, 129.62, 132.48, 130.53, 130.92, 143.33, 141.57, 141.48, 142.0, 141.34, 143.23, 152.87, 113.0, 152.41, 151.62, 150.95, 149.57, 160.15, 162.98, 161.42, 100.71, 165.8, 165.83, 174.55, 175.02, 174.48, 174.64, 166.48, 164.88, 172.07, 173.41, 173.78, 153.03, 177.79, 178.41, 182.93, 185.32, 185.95, 185.69, 187.2, 187.64, 193.18, 173.7, 197.67, 172.7, 89.31, 186.64, 188.49, 197.29, 197.5, 197.06, 197.12, 198.56, 201.07, 201.48, 200.38, 200.32, 198.73, 197.61, 199.45, 195.45, 200.52, 197.63, 191.57, 194.53, 201.83, 204.75, 203.87, 204.7, 201.47, 199.08, 199.87, 172.21, 191.01, 196.74, 196.76, 198.48, 198.64, 200.0, 175.21, 31.13, 0.0]
+#data = [277.37, 432.27, 493.5, 472.45, 459.25, 494.67, 418.56, 463.44, 446.67, 453.05, 475.01, 434.12, 492.87, 441.6, 466.64, 490.75, 409.12, 484.21, 441.75, 459.98, 493.48, 424.93, 464.29, 477.99, 420.05, 490.09, 466.36, 438.71, 490.63, 424.75, 219.49, 0]
+#data = [0.16, 0, 0.16, 0.3, 679.56, 868.97, 825.35, 807.29, 799.84, 794.99, 778.3, 789.64, 785.94, 785.3, 784.05, 782.35, 780.98, 820.54, 907, 923.62, 925.73, 896.89, 920.41, 923.05, 922.35, 919.34, 907.01, 924.74, 922.91, 814.18, 784.74, 781.93, 779.74, 779.18, 765.17, 790.01, 855.2, 859.66, 858.34, 859.52, 860.53, 861.29, 861.7, 846.91, 839.15, 779.59, 775.52, 774.46, 777.75, 775.52, 774.47, 761.84, 773.75, 613.21, 225.03, 80.98, 0.31, 1.02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+# Initialize distfit
+#dist = distfit()
+org_data_len = len(data)
+print(org_data_len)
+df = pd.DataFrame(data, columns =['data'])
+df['Id']=range(0,len(df))
+# Determine the optimal 'eps' euclidian distance using KNN and Elbow method
+# Defining number of neighbors for any point as 2
+neigh = NearestNeighbors(n_neighbors=2)
+nbrs = neigh.fit(df)
+distances, indices = nbrs.kneighbors(df)
+# Sort the distances of any point to its neighbor in ascending order
+distances = np.sort(distances, axis=0)
+distances = distances[:,1]
+x=range(1,len(distances)+1)
+# Calculate the knee/elbow to determine the optimal eps value
+kneedle = kneed.KneeLocator(x,distances,curve='convex', direction='increasing')
+knee_point = kneedle.knee_y
+#knee_point = 57.67850552848959
+print("knee_point",knee_point)
+# Feeding the data to DBSCAN algorithm
+clustering=DBSCAN(eps=knee_point, min_samples=2).fit(df)
+df['cluster_labels'] = clustering.labels_
+#max_cluster = max(set(clustering.labels_), key = list(clustering.labels_).count)
+#print("max_cluster", max_cluster)
+print("points in max cluster", len(df.data[(df.cluster_labels==max_cluster)]))
+print(clustering.labels_)
+print(list(zip(df.data, df.cluster_labels)))
+print(len(list(zip(df.data, df.cluster_labels))))
+# Determine the ramp_up cluster
+rampup_cluster=clustering.labels_[0]
+# Determine the ramp down cluster
+rampdown_cluster=clustering.labels_[-1]
+# If the Data contains only -1,0,1 or -1 & 0 clusters
+data_points_1=np.array([-1,0,1])
+data_points_2=np.array([-1,0])
+for label in range(0,len(clustering.labels_)):
+      if (clustering.labels_[label]==rampup_cluster):
+          continue
+      else:
+          # If the subsequent cluster value after rampupcluster is 0 (Rampupcluster is -1 for this condition)
+          if clustering.labels_[label]==0:
+              # Check if data has only 3 types of clusters -1,0 and 1
+              if set(clustering.labels_)==set(data_points_1):
+                  # Case1a: remove only -1 and ramp down points since there are only -1,0,1 clusters
+                  df_removedpoints=df[(df.cluster_labels==-1) | (df.cluster_labels==rampdown_cluster)]
+                  df_filtered= df.drop(df.index[(df.cluster_labels==-1) | (df.cluster_labels==rampdown_cluster)],inplace = False)
+              # Check if data has only 2 types of clsuters -1 and 0
+              elif set(clustering.labels_)==set(data_points_2):
+                  #Case1b: remove only -1 points since there are only -1,0 clusters
+                  df_removedpoints=df[(df.cluster_labels==-1)]
+                  df_filtered= df.drop(df.index[(df.cluster_labels==-1)],inplace = False)
+              # There are many clusters formed from the data
+              else:
+                  # Case1: remove zero points if -1 cluster is the first ramp up point
+                  df_removedpoints=df[(df.cluster_labels==rampup_cluster) | (df.cluster_labels==rampdown_cluster) | (df.cluster_labels==0)]
+                  df_filtered= df.drop(df.index[(df.cluster_labels==rampup_cluster) | (df.cluster_labels==rampdown_cluster) | (df.cluster_labels==0)],inplace = False)
+          # If the subsequent cluster value after rampupcluster is -1 (Rampupcluster is 0 for this condition)
+          elif clustering.labels_[label]==-1:
+                  #Case2: remove -1 points along with ramp up cluster
+                  df_removedpoints=df[(df.cluster_labels==rampup_cluster) | (df.cluster_labels==rampdown_cluster) | (df.cluster_labels==-1)]
+                  df_filtered= df.drop(df.index[(df.cluster_labels==rampup_cluster) | (df.cluster_labels==rampdown_cluster) | (df.cluster_labels==-1)],inplace = False)
+          # If the subsequent cluster value after rampupcluster is any value other than 0 or -1 (which are the rampup clusters in usual cases)
+          else:
+            # Case3: Remove only ramp up and ramp down points
+            df_removedpoints=df[(df.cluster_labels==rampup_cluster) | (df.cluster_labels==rampdown_cluster)]
+            df_filtered = df.drop(df.index[(df.cluster_labels==rampup_cluster) | (df.cluster_labels==rampdown_cluster)],inplace = False)
+          break
+'''
+print(df_filtered['data'].describe())
+percentile = stats.percentileofscore(df_filtered['data'], df_filtered['data'].mean())
+print("percentile", percentile)
+dist.fit_transform(df_filtered['data'])
+print(dist.summary)
+'''
+max_cluster = max(set(df_filtered['cluster_labels']), key = list(clustering.labels_).count)
+print("max_cluster", max_cluster)
+max_cluster_mean = df.data[(df.cluster_labels==max_cluster)].mean()
+print("max_cluster_mean", max_cluster_mean)
+mad = df_filtered['data'].mad()
+print("mad", mad)
+std = df_filtered['data'].std()
+mean = df_filtered['data'].mean()
+dev_cluster = []
+dev_cluster_2std = []
+print("std of data",std)
+for data in list(df_filtered['data']):
+  if (data >= (mean-std)) and (data <=(mean+std)):
+    dev_cluster.append(data)
+print("length of filtered data", len(list(df_filtered['data'])))
+print("dev_cluster",len(dev_cluster))
+print("%",(len(dev_cluster)/len(list(df_filtered['data'])))*100)
+if (len(dev_cluster)/len(list(df_filtered['data']))) < 75:
+  for data in list(df_filtered['data']):
+    if (data >= (mean-2*std)) and (data <=(mean+2*std)):
+      dev_cluster_2std.append(data)
+print("%2std",(len(dev_cluster_2std)/len(list(df_filtered['data'])))*100)
+labels =set(df_filtered['cluster_labels'])
+print('labels', labels)
+avg_dict = {}
+zero_cluster = None
+for i in labels:
+  cluster_data = df_filtered[df_filtered['cluster_labels']==i]
+  if cluster_data['data'].any() == 0.0:
+    df_removedpoints = df_removedpoints.append(df_filtered[(df_filtered['data']>=0.0) & (df_filtered['data']<=20.0)])
+    df_filtered = df_filtered.drop(df_filtered.index[(df_filtered['data']>=0.0) & (df_filtered['data']<=20.0)])
+    zero_cluster = cluster_data['cluster_labels']
+    print(f"no of points in cluster with zero values {len(cluster_data)}")
+  avg_dict[i] = average(cluster_data['data'])
+if zero_cluster is not None:
+  print("which cluster has zero data", list(zero_cluster.drop_duplicates()))
+print(avg_dict)
+'''
+diff_dict = {}
+diff_val = {}
+for k,v in avg_dict.items():
+  if v<max_cluster_mean and v!=0.0:
+    diff = (abs(v-max_cluster_mean)/max_cluster_mean)*100
+    diff_val[k] = diff
+    diff_dict[k] = f"{v} is {diff}% less than {max_cluster_mean}"
+  elif v == max_cluster_mean or v == 0.0:
+    diff_dict[k] = "Same value so ignore"
+    diff_val[k] = 0
+    if v == 0.0:
+        #diff_val[k] = 100
+        diff_val[k] = 100
+  else:
+    diff = (abs(v-max_cluster_mean)/max_cluster_mean)*100
+    diff_val[k] = diff
+    diff_dict[k] = f"{v} is {diff}% more than {max_cluster_mean}"
+print("diff_dict", diff_dict)
+print("% difference values", list(diff_val.values()))
+max_diff = max([val for key, val in diff_val.items() if val>0 and val<100])
+print("max_diff", max_diff)
+check_slab(max_diff)
+cluster_max_deviation = list(diff_val.values()).index(max_diff)+1
+print("Which cluster has much deviation", cluster_max_deviation)
+df_deviation = df_filtered[df_filtered.cluster_labels==cluster_max_deviation]
+print("Cluster with max deviation",list(df_filtered.data[df_filtered.cluster_labels==cluster_max_deviation]))
+print("stable cluster - cluster with max points",list(df.data[(df.cluster_labels==max_cluster)]))
+'''
+throughput_calc=df_filtered['data'].mean()
+print("tp",throughput_calc)
+df['Id']=range(0,len(df))
+colors = ['royalblue', 'maroon', 'forestgreen', 'mediumorchid', 'tan', 'deeppink', 'olive', 'goldenrod', 'cyan', 'orange']
+vectorizer = np.vectorize(lambda x: colors[x % len(colors)])
+#print(df_removedpoints['data'])
+#Red points indicate Outliers
+plt.plot(df['data'])
+plt.scatter(df_removedpoints['Id'], df_removedpoints['data'], color='red')
+plt.scatter(df_filtered['Id'], df_filtered['data'], c=vectorizer(df_filtered['cluster_labels']))
+#plt.scatter(df_deviation['Id'], df_deviation['data'], color='black')
